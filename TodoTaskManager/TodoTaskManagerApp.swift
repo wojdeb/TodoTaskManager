@@ -11,7 +11,7 @@ import SwiftUI
 struct TodoTaskManagerApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            TaskView(vm: TaskViewModel(provider: NetworkTaskProvider()))
         }
     }
 }
