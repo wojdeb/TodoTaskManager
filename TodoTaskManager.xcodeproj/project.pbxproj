@@ -40,11 +40,6 @@
 			path = TodoTaskManagerTests;
 			sourceTree = "<group>";
 		};
-		C9B695EB2FCB462B00F52FDC /* TodoTaskManagerUITests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = TodoTaskManagerUITests;
-			sourceTree = "<group>";
-		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -77,7 +72,6 @@
 			children = (
 				C9B695D32FCB462A00F52FDC /* TodoTaskManager */,
 				C9B695E12FCB462B00F52FDC /* TodoTaskManagerTests */,
-				C9B695EB2FCB462B00F52FDC /* TodoTaskManagerUITests */,
 				C9B695D22FCB462A00F52FDC /* Products */,
 			);
 			sourceTree = "<group>";
@@ -152,9 +146,6 @@
 			);
 			dependencies = (
 				C9B695EA2FCB462B00F52FDC /* PBXTargetDependency */,
-			);
-			fileSystemSynchronizedGroups = (
-				C9B695EB2FCB462B00F52FDC /* TodoTaskManagerUITests */,
 			);
 			name = TodoTaskManagerUITests;
 			packageProductDependencies = (

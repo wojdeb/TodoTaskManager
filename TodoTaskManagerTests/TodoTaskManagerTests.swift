@@ -8,29 +8,83 @@
 import XCTest
 @testable import TodoTaskManager
 
+class MockTaskProvider: TaskProviding {
+    var mockTodos: [Todo] = []
+    var shouldFail = false
+    
+    func fetchTodos() async throws -> [Todo] {
+        if shouldFail { throw URLError(.notConnectedToInternet) }
+        return mockTodos
+    }
+    
+    func patchTodo(id: Int, completed: Bool) async throws -> Todo {
+        guard let index = mockTodos.firstIndex(where: { $0.id == id }) else {
+            throw URLError(.badURL)
+        }
+        
+        mockTodos[index].completed = completed
+        return mockTodos[index]
+    }
+}
+
+@MainActor
 final class TodoTaskManagerTests: XCTestCase {
-
-    override func setUpWithError() throws {
-        // Put setup code here. This method is called before the invocation of each test method in the class.
+    func testFetchTodos_success() async {
+        //given
+        let mock = MockTaskProvider()
+        mock.mockTodos = [Todo(id: 1, userId: 1, title: "Test", completed: false)]
+        let vm = TaskViewModel(provider: mock)
+        
+        //when
+        await vm.fetchTodos()
+        
+        //then
+        XCTAssertEqual(vm.filteredTasks.count, 1)
     }
-
-    override func tearDownWithError() throws {
-        // Put teardown code here. This method is called after the invocation of each test method in the class.
-    }
-
-    func testExample() throws {
-        // This is an example of a functional test case.
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
-        // Any test you write for XCTest can be annotated as throws and async.
-        // Mark your test throws to produce an unexpected failure when your test encounters an uncaught error.
-        // Mark your test async to allow awaiting for asynchronous code to complete. Check the results with assertions afterwards.
-    }
-
-    func testPerformanceExample() throws {
-        // This is an example of a performance test case.
-        self.measure {
-            // Put the code you want to measure the time of here.
+    
+    func testFetchTodos_failure() async {
+        //given
+        let mock = MockTaskProvider()
+        mock.shouldFail = true
+        let vm = TaskViewModel(provider: mock)
+        
+        //when
+        await vm.fetchTodos()
+        
+        //then
+        XCTAssertEqual(vm.filteredTasks.count, 0)
+        if case .error(let message) = vm.state {
+            XCTAssertEqual("Something went wrong", message)
+        } else {
+            XCTFail("state should be error")
         }
     }
-
+    
+    func testToggleTodo_success() async {
+        //given
+        let mock = MockTaskProvider()
+        mock.mockTodos = [Todo(id: 1, userId: 1, title: "Test", completed: false)]
+        let vm = TaskViewModel(provider: mock)
+        await vm.fetchTodos()
+        
+        //when
+        await vm.toggleTodo(id: 1)
+        
+        //then
+        XCTAssertEqual(vm.filteredTasks.first?.completed, true)
+    }
+    
+    func testToggleTodo_failure() async {
+        //given
+        let mock = MockTaskProvider()
+        mock.mockTodos = [Todo(id: 1, userId: 1, title: "Test", completed: false)]
+        let vm = TaskViewModel(provider: mock)
+        await vm.fetchTodos()
+        
+        //when
+        await vm.toggleTodo(id: 99)
+        
+        //then
+        XCTAssertEqual(vm.filteredTasks.first?.completed, false)
+    }
 }
