@@ -34,7 +34,7 @@ class TaskViewModel: ObservableObject {
         }
         
         if !searchQuery.isEmpty {
-            return filtered.filter {$0.title.contains(searchQuery)}
+            return filtered.filter {$0.title.contains(searchQuery.lowercased())}
         } else {
             return filtered
         }
@@ -59,11 +59,17 @@ class TaskViewModel: ObservableObject {
         await fetchTodos()
     }
     
-    func toggleTodo(id: Todo.ID) {
+    func toggleTodo(id: Todo.ID) async {
         guard case .content(var tasks) = state else { return }
         
         guard let index = tasks.firstIndex(where: {task in task.id == id}) else { return }
         tasks[index].completed.toggle()
         state = .content(tasks: tasks)
+        
+        do {
+            try await provider.patchTodo(id: id, completed: tasks[index].completed)
+        } catch {
+            state = .error(message: "Something went wrong")
+        }
     }
 }

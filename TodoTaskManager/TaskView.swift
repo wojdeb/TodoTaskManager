@@ -43,12 +43,12 @@ struct TaskView: View {
                 List {
                     Section("To do") {
                         ForEach(vm.filteredTasks.filter { !$0.completed }) { task in
-                            TaskRow(task: task)
+                            TaskRow(task: task, onTap: {await vm.toggleTodo(id: task.id)})
                         }
                     }
                     Section("Completed") {
                         ForEach(vm.filteredTasks.filter { $0.completed }) { task in
-                            TaskRow(task: task)
+                            TaskRow(task: task, onTap: {await vm.toggleTodo(id: task.id)})
                         }
                     }
                 }
@@ -64,6 +64,7 @@ struct TaskView: View {
 
 struct TaskRow: View {
     let task: Todo
+    let onTap: () async -> Void
     
     var body: some View {
         HStack(spacing: 12) {
@@ -74,6 +75,9 @@ struct TaskRow: View {
                 Text("User: \(task.userId)")
                     .font(.caption)
                     .foregroundColor(.secondary)
+            }
+            .onTapGesture {
+                Task { await onTap() }
             }
             Spacer()
         }
