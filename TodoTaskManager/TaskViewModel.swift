@@ -69,6 +69,7 @@ class TaskViewModel: ObservableObject {
         do {
             try await provider.patchTodo(id: id, completed: tasks[index].completed)
         } catch {
+            tasks[index].completed.toggle()
             state = .error(message: "Something went wrong")
         }
     }
