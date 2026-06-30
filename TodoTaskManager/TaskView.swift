@@ -8,14 +8,11 @@
 import SwiftUI
 
 struct TaskView: View {
-    @ObservedObject var vm: TaskViewModel
+    @StateObject private var vm = TaskViewModel(provider: NetworkTaskProvider())
     
     var body: some View {
         NavigationStack {
             content
-                .task {
-                    await vm.fetchTodos()
-                }
         }
     }
     
@@ -26,8 +23,8 @@ struct TaskView: View {
             ProgressView()
         case .error(let message):
             ErrorView(message: message, retry: {
-                    Task { await vm.refresh() }
-                })
+                Task { await vm.fetchTodos() }
+            })
         case .empty:
             EmptyView()
         case .content:
@@ -54,10 +51,12 @@ struct TaskView: View {
                 }
                 .searchable(text: $vm.searchQuery, prompt: "Search tasks...")
                 .refreshable {
-                    await vm.refresh()
+                    await Task {
+                        await vm.fetchTodos()
+                    }.value
                 }
+                
             }
-            
         }
     }
 }
@@ -69,6 +68,7 @@ struct TaskRow: View {
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: task.completed ? "checkmark.circle.fill" : "circle")
+            //                .animation()
             VStack(alignment: .leading, spacing: 2) {
                 Text(task.title)
                     .foregroundColor(task.completed ? .secondary : .primary)
@@ -76,26 +76,28 @@ struct TaskRow: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
-            .onTapGesture {
-                Task { await onTap() }
-            }
+            
             Spacer()
+        }
+        .onTapGesture {
+            Task { await onTap() }
         }
     }
 }
 
 struct ErrorView: View {
     let message: String
-        let retry: () -> Void
-        
-        var body: some View {
-            VStack(spacing: 16) {
-                Text(message)
-                Button("Try again") { retry() }
-            }
+    let retry: () -> Void
+    
+    var body: some View {
+        VStack(spacing: 16) {
+            Text(message)
+            Button("Try again") { retry() }
         }
+    }
 }
 
+
 #Preview {
-    TaskView(vm: TaskViewModel(provider: NetworkTaskProvider()))
+    TaskView()
 }

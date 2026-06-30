@@ -18,6 +18,9 @@ class TaskViewModel: ObservableObject {
     
     init(provider: TaskProviding) {
         self.provider = provider
+        Task {
+            await fetchTodos()
+        }
     }
     
     var filteredTasks: [Todo] {
@@ -41,23 +44,19 @@ class TaskViewModel: ObservableObject {
     }
 
     func fetchTodos() async {
-        state = .loading
+         state = .loading
 
-        do {
-            let tasks = try await provider.fetchTodos()
-            if tasks.isEmpty {
-                state = .empty
-            } else {
-                state = .content(tasks: tasks)
-            }
-        } catch {
-            state = .error(message: "Something went wrong")
-        }
-    }
-    
-    func refresh() async {
-        await fetchTodos()
-    }
+         do {
+             let tasks = try await provider.fetchTodos()
+             if tasks.isEmpty {
+                 state = .empty
+             } else {
+                 state = .content(tasks: tasks)
+             }
+         } catch {
+             state = .error(message: "Something went wrong")
+         }
+     }
     
     func toggleTodo(id: Todo.ID) async {
         guard case .content(var tasks) = state else { return }
@@ -70,7 +69,7 @@ class TaskViewModel: ObservableObject {
             try await provider.patchTodo(id: id, completed: tasks[index].completed)
         } catch {
             tasks[index].completed.toggle()
-            state = .error(message: "Something went wrong")
+            state = .content(tasks: tasks)
         }
     }
 }
