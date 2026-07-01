@@ -37,7 +37,7 @@ class TaskViewModel: ObservableObject {
         }
         
         if !searchQuery.isEmpty {
-            return filtered.filter {$0.title.contains(searchQuery.lowercased())}
+            return filtered.filter {$0.title.lowercased().contains(searchQuery.lowercased())}
         } else {
             return filtered
         }
