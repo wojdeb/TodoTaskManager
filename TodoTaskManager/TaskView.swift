@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct TaskView: View {
-    @StateObject private var vm = TaskViewModel(provider: NetworkTaskProvider())
+    @ObservedObject var vm: TaskViewModel
     
     var body: some View {
         NavigationStack {
@@ -68,7 +68,6 @@ struct TaskRow: View {
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: task.completed ? "checkmark.circle.fill" : "circle")
-            //                .animation()
             VStack(alignment: .leading, spacing: 2) {
                 Text(task.title)
                     .foregroundColor(task.completed ? .secondary : .primary)
@@ -99,5 +98,5 @@ struct ErrorView: View {
 
 
 #Preview {
-    TaskView()
+    TaskView(vm: TaskViewModel(provider: NetworkTaskProvider()))
 }
