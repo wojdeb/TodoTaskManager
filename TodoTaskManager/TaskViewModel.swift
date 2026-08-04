@@ -53,8 +53,13 @@ class TaskViewModel: ObservableObject {
              } else {
                  state = .content(tasks: tasks)
              }
+         } catch let error as TaskError {
+             print(error.developerLog)
+             state = .error(message: error.userMessage)
          } catch {
-             state = .error(message: "Something went wrong")
+             let taskError = TaskError.unknown(error)
+             print(taskError.developerLog)
+             state = .error(message: taskError.userMessage)
          }
      }
     

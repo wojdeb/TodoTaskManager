@@ -15,40 +15,77 @@ protocol TaskProviding {
 struct NetworkTaskProvider: TaskProviding {
     func fetchTodos() async throws -> [Todo] {
         guard let url = URL(string: "https://jsonplaceholder.typicode.com/todos") else {
-            print("Invalid URL")
-            throw URLError(.badURL)
+            throw TaskError.badUrl(url: "https://jsonplaceholder.typicode.com/todos")
         }
         
-        let (data, response) = try await URLSession.shared.data(from: url)
         
-        guard let response = response as? HTTPURLResponse, (200...299).contains(response.statusCode) else {
-            print("Network error")
-            throw URLError(.badServerResponse)
+        let (data, response): (Data, URLResponse)
+        do {
+            (data, response) = try await URLSession.shared.data(from: url)
+        } catch {
+            throw mapError(error)
+        }
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw TaskError.invalidResponse(body: "Invalid response type")
         }
 
-        return try JSONDecoder().decode([Todo].self, from: data)
-        
+        guard (200...299).contains(httpResponse.statusCode) else {
+            throw TaskError.serverError(statusCode: httpResponse.statusCode)
+        }
+
+        do {
+            return try JSONDecoder().decode([Todo].self, from: data)
+        } catch {
+            throw mapError(error)
+        }
     }
 
     
     func patchTodo(id: Int, completed: Bool) async throws -> Todo {
         guard let url = URL(string: "https://jsonplaceholder.typicode.com/todos/\(id)") else {
-            print("Invalid URL")
-            throw URLError(.badURL)
+            throw TaskError.badUrl(url: "https://jsonplaceholder.typicode.com/todos/\(id)")
         }
         
         var request = URLRequest(url: url)
         request.httpMethod = "PATCH"
         request.httpBody = try JSONEncoder().encode(["completed": completed])
         
-        let (data, response) = try await URLSession.shared.data(for: request)
-        
-        guard let response = response as? HTTPURLResponse, (200...299).contains(response.statusCode) else {
-            print("Network error")
-            throw URLError(.badServerResponse)
+        let (data, response): (Data, URLResponse)
+        do {
+            (data, response) = try await URLSession.shared.data(for: request)
+        } catch {
+            throw mapError(error)
         }
         
-        print("id: \(id), completed: \(completed) PATCH EXECUTED")
-        return try JSONDecoder().decode(Todo.self, from: data)
+        guard let response = response as? HTTPURLResponse else {
+            throw TaskError.invalidResponse(body: "Invalid response type")
+        }
+        guard (200...299).contains(response.statusCode) else {
+            throw TaskError.serverError(statusCode: response.statusCode)
+        }
+                
+        do {
+            return try JSONDecoder().decode(Todo.self, from: data)
+        } catch {
+            throw mapError(error)
+        }
+    }
+    
+    private func mapError(_ error: Error) -> TaskError {
+        if let urlError = error as? URLError {
+            switch urlError.code {
+                case .notConnectedToInternet: return .noConnection
+                case .timedOut: return .timeout
+                case .badServerResponse: return .invalidResponse(body: "No response body available")
+                default: return .unknown(error)
+            }
+            
+        }
+        if let urlError = error as? DecodingError {
+            return .decodingFailed
+        }
+        
+        return .unknown(error)
     }
 }
