@@ -14,6 +14,8 @@ class TaskViewModel: ObservableObject {
     @Published var filter: TaskFilter = .all
     @Published var searchQuery: String = ""
     
+    private var pendingToggles: Set<Todo.ID> = []
+    
     let provider: TaskProviding
     
     init(provider: TaskProviding) {
@@ -66,13 +68,23 @@ class TaskViewModel: ObservableObject {
     func toggleTodo(id: Todo.ID) async {
         guard case .content(var tasks) = state else { return }
         
+        guard !pendingToggles.contains(id) else { return }
+        pendingToggles.insert(id)
+        defer { pendingToggles.remove(id) }
+        
         guard let index = tasks.firstIndex(where: {task in task.id == id}) else { return }
         tasks[index].completed.toggle()
         state = .content(tasks: tasks)
         
         do {
             try await provider.patchTodo(id: id, completed: tasks[index].completed)
+        } catch let error as TaskError {
+            print(error.developerLog)
+            tasks[index].completed.toggle()
+            state = .content(tasks: tasks)
         } catch {
+            let taskError = TaskError.unknown(error)
+            print(taskError.developerLog)
             tasks[index].completed.toggle()
             state = .content(tasks: tasks)
         }
