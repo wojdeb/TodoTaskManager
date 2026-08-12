@@ -8,8 +8,9 @@
 import SwiftUI
 
 struct TaskView: View {
-    @ObservedObject var vm: TaskViewModel
-    
+    @StateObject private var vm = TaskViewModel(
+        repository: TodoRepositoryImpl(provider: NetworkTaskProvider())
+    )
     var body: some View {
         NavigationStack {
             content
@@ -98,5 +99,5 @@ struct ErrorView: View {
 
 
 #Preview {
-    TaskView(vm: TaskViewModel(provider: NetworkTaskProvider()))
+    TaskView()
 }

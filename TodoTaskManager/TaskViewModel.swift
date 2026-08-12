@@ -14,12 +14,10 @@ class TaskViewModel: ObservableObject {
     @Published var filter: TaskFilter = .all
     @Published var searchQuery: String = ""
     
-    private var pendingToggles: Set<Todo.ID> = []
-    
-    let provider: TaskProviding
-    
-    init(provider: TaskProviding) {
-        self.provider = provider
+    private let todoRepository: TodoRepository
+        
+    init(repository: TodoRepository) {
+        self.todoRepository = repository
         Task {
             await fetchTodos()
         }
@@ -49,7 +47,7 @@ class TaskViewModel: ObservableObject {
          state = .loading
 
          do {
-             let tasks = try await provider.fetchTodos()
+             let tasks = try await todoRepository.fetchTodos()
              if tasks.isEmpty {
                  state = .empty
              } else {
@@ -68,24 +66,19 @@ class TaskViewModel: ObservableObject {
     func toggleTodo(id: Todo.ID) async {
         guard case .content(var tasks) = state else { return }
         
-        guard !pendingToggles.contains(id) else { return }
-        pendingToggles.insert(id)
-        defer { pendingToggles.remove(id) }
-        
-        guard let index = tasks.firstIndex(where: {task in task.id == id}) else { return }
+        guard let index = tasks.firstIndex(where: { $0.id == id }) else { return }
+        let task = tasks[index]
         tasks[index].completed.toggle()
         state = .content(tasks: tasks)
-        
+                
         do {
-            try await provider.patchTodo(id: id, completed: tasks[index].completed)
+            try await todoRepository.toggleTodo(id: id, completed: !task.completed)
         } catch let error as TaskError {
             print(error.developerLog)
-            tasks[index].completed.toggle()
             state = .content(tasks: tasks)
         } catch {
             let taskError = TaskError.unknown(error)
             print(taskError.developerLog)
-            tasks[index].completed.toggle()
             state = .content(tasks: tasks)
         }
     }
