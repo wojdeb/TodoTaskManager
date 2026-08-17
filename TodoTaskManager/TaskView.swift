@@ -6,11 +6,11 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct TaskView: View {
-    @StateObject private var vm = TaskViewModel(
-        repository: TodoRepositoryImpl(provider: NetworkTaskProvider())
-    )
+    @ObservedObject var vm: TaskViewModel
+    
     var body: some View {
         NavigationStack {
             content
@@ -99,5 +99,12 @@ struct ErrorView: View {
 
 
 #Preview {
-    TaskView()
+    let config = ModelConfiguration(isStoredInMemoryOnly: true)
+    let container = try! ModelContainer(for: TodoModel.self, configurations: config)
+    let repository = TodoRepositoryImpl(
+        provider: NetworkTaskProvider(),
+        context: container.mainContext
+    )
+    return TaskView(vm: TaskViewModel(repository: repository))
+        .modelContainer(container)
 }
