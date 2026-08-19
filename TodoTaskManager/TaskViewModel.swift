@@ -42,6 +42,14 @@ class TaskViewModel: ObservableObject {
             return filtered
         }
     }
+    
+    var activeTasks: [Todo] {
+        filteredTasks.filter { !$0.completed }
+    }
+    
+    var completedTasks: [Todo] {
+        filteredTasks.filter { $0.completed }
+    }
 
     func fetchTodos() async {
          state = .loading

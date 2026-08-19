@@ -42,12 +42,12 @@ struct TaskView: View {
                 
                 List {
                     Section("To do") {
-                        ForEach(vm.filteredTasks.filter { !$0.completed }) { task in
+                        ForEach(vm.activeTasks) { task in
                             TaskRow(task: task, onTap: {await vm.toggleTodo(id: task.id)})
                         }
                     }
                     Section("Completed") {
-                        ForEach(vm.filteredTasks.filter { $0.completed }) { task in
+                        ForEach(vm.completedTasks) { task in
                             TaskRow(task: task, onTap: {await vm.toggleTodo(id: task.id)})
                         }
                     }
