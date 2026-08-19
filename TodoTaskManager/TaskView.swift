@@ -10,6 +10,8 @@ import SwiftData
 
 struct TaskView: View {
     @ObservedObject var vm: TaskViewModel
+    @AppStorage("isDarkMode") var isDarkMode: Bool = false
+
     
     var body: some View {
         NavigationStack {
@@ -55,6 +57,16 @@ struct TaskView: View {
                     await Task {
                         await vm.fetchTodos()
                     }.value
+                }
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                            Button {
+                                isDarkMode.toggle()
+                            } label: {
+                                Text(isDarkMode ? "Light Mode": "Dark Mode")
+                                Image(systemName: isDarkMode ?  "sun.max.fill" : "moon.fill")
+                            }
+                        }
                 }
                 
             }

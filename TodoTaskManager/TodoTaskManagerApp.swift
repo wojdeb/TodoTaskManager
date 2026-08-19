@@ -11,6 +11,7 @@ import SwiftData
 @main
 struct TodoTaskManagerApp: App {
     let container: ModelContainer
+    @AppStorage("isDarkMode") var isDarkMode: Bool = false
     
     init() {
         do {
@@ -27,7 +28,7 @@ struct TodoTaskManagerApp: App {
                     provider: NetworkTaskProvider(),
                     context: container.mainContext
                 )
-            ))
+            )).preferredColorScheme(isDarkMode ? .dark : .light)
         }
         .modelContainer(for: TodoModel.self)
     }
