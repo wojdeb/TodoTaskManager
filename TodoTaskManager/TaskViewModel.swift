@@ -13,6 +13,7 @@ class TaskViewModel: ObservableObject {
     @Published private(set) var state: TasksViewState = .loading
     @Published var filter: TaskFilter = .all
     @Published var searchQuery: String = ""
+    @Published var snackbarMessage: String?
     
     private let todoRepository: TodoRepository
         
@@ -82,12 +83,21 @@ class TaskViewModel: ObservableObject {
         do {
             try await todoRepository.toggleTodo(id: id, completed: !task.completed)
         } catch let error as TaskError {
+            showSnackbar(task.completed ? "Failed to unmark task" : "Failed to mark task")
             print(error.developerLog)
             state = .content(tasks: tasks)
         } catch {
             let taskError = TaskError.unknown(error)
             print(taskError.developerLog)
             state = .content(tasks: tasks)
+        }
+    }
+    
+    func showSnackbar(_ message: String) {
+        snackbarMessage = message
+        Task {
+            try? await Task.sleep(for: .seconds(3))
+            snackbarMessage = nil
         }
     }
 }

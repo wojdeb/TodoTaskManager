@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+import AlertToast
 
 struct TaskView: View {
     @ObservedObject var vm: TaskViewModel
@@ -40,6 +41,10 @@ struct TaskView: View {
                 .pickerStyle(.segmented)
                 .padding(.horizontal)
                 
+                Button("Test snackbar") {
+                    vm.showSnackbar("Snackbar Test")
+                }
+                
                 List {
                     Section("To do") {
                         ForEach(vm.activeTasks) { task in
@@ -68,7 +73,9 @@ struct TaskView: View {
                             }
                         }
                 }
-                
+                .toast(isPresenting: .constant(vm.snackbarMessage != nil)) {
+                    AlertToast(type: .error(.red), title: vm.snackbarMessage ?? "")
+                }
             }
         }
     }
@@ -108,7 +115,6 @@ struct ErrorView: View {
         }
     }
 }
-
 
 #Preview {
     let config = ModelConfiguration(isStoredInMemoryOnly: true)
