@@ -76,6 +76,7 @@ class TaskViewModel: ObservableObject {
         guard case .content(var tasks) = state else { return }
         
         guard let index = tasks.firstIndex(where: { $0.id == id }) else { return }
+        let originalTasks = tasks
         let task = tasks[index]
         tasks[index].completed.toggle()
         state = .content(tasks: tasks)
@@ -85,11 +86,11 @@ class TaskViewModel: ObservableObject {
         } catch let error as TaskError {
             showSnackbar(task.completed ? "Failed to unmark task" : "Failed to mark task")
             print(error.developerLog)
-            state = .content(tasks: tasks)
+            state = .content(tasks: originalTasks)
         } catch {
             let taskError = TaskError.unknown(error)
             print(taskError.developerLog)
-            state = .content(tasks: tasks)
+            state = .content(tasks: originalTasks)
         }
     }
     

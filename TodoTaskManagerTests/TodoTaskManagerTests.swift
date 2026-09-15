@@ -6,106 +6,168 @@
 //
 
 import XCTest
+import SwiftData
 @testable import TodoTaskManager
 
-class MockTaskProvider: TaskProviding {
+class MockTodoRepository: TodoRepository {
+    private var cache: [Todo] = []
+
     var mockTodos: [Todo] = []
-    var shouldFail = false
-    var patchCallCount = 0
+    var shouldFailFetch = false
+    var shouldFailToggle = false
     
     func fetchTodos() async throws -> [Todo] {
-        if shouldFail { throw URLError(.notConnectedToInternet) }
+        if shouldFailFetch { throw TaskError.noConnection }
         return mockTodos
     }
     
-    func patchTodo(id: Int, completed: Bool) async throws -> Todo {
-        patchCallCount += 1
-        try await Task.sleep(for: .milliseconds(100))  
-
-        guard let index = mockTodos.firstIndex(where: { $0.id == id }) else {
-            throw URLError(.badURL)
-        }
-        
+    func toggleTodo(id: Int, completed: Bool) async throws {
+        if shouldFailToggle { throw TaskError.serverError(statusCode: 500) }
+        guard let index = mockTodos.firstIndex(where: { $0.id == id }) else { return }
         mockTodos[index].completed = completed
-        return mockTodos[index]
     }
 }
 
 @MainActor
 final class TodoTaskManagerTests: XCTestCase {
+    var mock: MockTodoRepository!
+    var vm: TaskViewModel!
+    
+    override func setUp() async throws {
+        mock = MockTodoRepository()
+        vm = TaskViewModel(repository: mock)
+    }
+    
+    override func tearDown() {
+        mock = nil
+        vm = nil
+        super.tearDown()
+    }
+    
     func testFetchTodos_success() async {
-        //given
-        let mock = MockTaskProvider()
         mock.mockTodos = [Todo(id: 1, userId: 1, title: "Test", completed: false)]
-        let vm = TaskViewModel(provider: mock)
-        
-        //when
         await vm.fetchTodos()
-        
-        //then
         XCTAssertEqual(vm.filteredTasks.count, 1)
     }
     
     func testFetchTodos_failure() async {
-        //given
-        let mock = MockTaskProvider()
-        mock.shouldFail = true
-        let vm = TaskViewModel(provider: mock)
-        
-        //when
+        mock.shouldFailFetch = true
         await vm.fetchTodos()
-        
-        //then
         XCTAssertEqual(vm.filteredTasks.count, 0)
         if case .error(let message) = vm.state {
-            XCTAssertEqual("Something went wrong", message)
+            XCTAssertEqual("No internet connection. Check your network and try again.", message)
         } else {
             XCTFail("state should be error")
         }
     }
     
     func testToggleTodo_success() async {
-        //given
-        let mock = MockTaskProvider()
         mock.mockTodos = [Todo(id: 1, userId: 1, title: "Test", completed: false)]
-        let vm = TaskViewModel(provider: mock)
         await vm.fetchTodos()
-        
-        //when
         await vm.toggleTodo(id: 1)
-        
-        //then
         XCTAssertEqual(vm.filteredTasks.first?.completed, true)
     }
     
     func testToggleTodo_failure() async {
-        //given
-        let mock = MockTaskProvider()
         mock.mockTodos = [Todo(id: 1, userId: 1, title: "Test", completed: false)]
-        let vm = TaskViewModel(provider: mock)
         await vm.fetchTodos()
-        
-        //when
         await vm.toggleTodo(id: 99)
-        
-        //then
         XCTAssertEqual(vm.filteredTasks.first?.completed, false)
     }
     
-    func testDoubleToggle() async {
-        //given
-        let mock = MockTaskProvider()
-        mock.mockTodos = [Todo(id: 1, userId: 1, title: "Test", completed: false)]
-        let vm = TaskViewModel(provider: mock)
+    func testFilterActive_returnsActiveTasks() async {
+        mock.mockTodos = [
+            Todo(id: 1, userId: 1, title: "Test1", completed: false),
+            Todo(id: 2, userId: 1, title: "Test2", completed: true),
+            Todo(id: 3, userId: 1, title: "Test3", completed: true),
+            Todo(id: 4, userId: 1, title: "Test4", completed: false)
+        ]
+
         await vm.fetchTodos()
         
-        //when
-        async let first = vm.toggleTodo(id: 1)
-        async let second = vm.toggleTodo(id: 1)
-        _ = await (first, second)
+        XCTAssertEqual(vm.activeTasks.count, 2)
+    }
+    
+    func testFilterDone_returnsCompletedTasks() async {
+        mock.mockTodos = [
+            Todo(id: 1, userId: 1, title: "Test1", completed: false),
+            Todo(id: 2, userId: 1, title: "Test2", completed: true),
+            Todo(id: 3, userId: 1, title: "Test3", completed: true),
+            Todo(id: 4, userId: 1, title: "Test4", completed: false),
+            Todo(id: 5, userId: 1, title: "Test5", completed: true)
+        ]
+
+        await vm.fetchTodos()
         
-        //then
-        XCTAssertEqual(vm.filteredTasks.first?.completed, true)
-        XCTAssertEqual(mock.patchCallCount, 1)
+        XCTAssertEqual(vm.completedTasks.count, 3)
+    }
+    
+    func testFilterAll_returnsAllTasks() async {
+        mock.mockTodos = [
+            Todo(id: 1, userId: 1, title: "Test1", completed: false),
+            Todo(id: 2, userId: 1, title: "Test2", completed: true),
+            Todo(id: 3, userId: 1, title: "Test3", completed: true),
+            Todo(id: 4, userId: 1, title: "Test4", completed: false),
+            Todo(id: 5, userId: 1, title: "Test5", completed: true)
+        ]
+
+        await vm.fetchTodos()
+        
+        XCTAssertEqual(vm.filteredTasks.count, 5)
+    }
+    
+    func testSearchQuery_returnsMatchingTasks() async {
+        mock.mockTodos = [
+            Todo(id: 1, userId: 1, title: "Test1", completed: false),
+            Todo(id: 2, userId: 1, title: "Test2_QUERY", completed: true),
+            Todo(id: 3, userId: 1, title: "QUERY_Test3", completed: true),
+            Todo(id: 4, userId: 1, title: "Test4", completed: false),
+            Todo(id: 5, userId: 1, title: "Te_QUERY_st5", completed: true)
+        ]
+        
+        await vm.fetchTodos()
+        vm.searchQuery = "QUERY"
+        
+        XCTAssertEqual(vm.filteredTasks.count, 3)
+    }
+    
+    func testSearchQuery_empty_returnsAllFilteredTasks() async {
+        mock.mockTodos = [
+            Todo(id: 1, userId: 1, title: "Test1", completed: false),
+            Todo(id: 2, userId: 1, title: "Test2", completed: true)
+            ]
+        
+        await vm.fetchTodos()
+        vm.searchQuery = ""
+        
+        XCTAssertEqual(vm.filteredTasks.count, 2)
+    }
+    
+    func testFetchTodos_emptyResponse_emptyState() async {
+        mock.mockTodos = []
+        
+        await vm.fetchTodos()
+        
+        guard case .empty = vm.state else {
+            XCTFail("State shoud be empty")
+            return
+        }
+    }
+    
+    func testToggleTodo_rollback_onFailure() async {
+        mock.mockTodos = [
+            Todo(id: 1, userId: 1, title: "Test1", completed: false),
+            Todo(id: 2, userId: 1, title: "Test2", completed: true)
+            ]
+        
+        await vm.fetchTodos()
+        mock.shouldFailToggle = true
+        await vm.toggleTodo(id: 1)
+        
+        XCTAssertEqual(vm.filteredTasks.first?.completed, false)
+        guard case .content = vm.state else {
+            XCTFail("State should be content after rollback")
+            return
+        }
     }
 }
