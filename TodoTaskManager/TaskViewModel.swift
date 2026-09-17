@@ -101,4 +101,10 @@ class TaskViewModel: ObservableObject {
             snackbarMessage = nil
         }
     }
+    
+#if DEBUG
+func setState(_ state: TasksViewState) {
+    self.state = state
+}
+#endif
 }
