@@ -31,6 +31,8 @@ class TodoRepositoryImpl: TodoRepository {
             return cache
         } catch  {
             cache = loadFromSwiftData()
+            
+            guard !cache.isEmpty else { throw error }
             return cache
         }
     }
