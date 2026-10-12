@@ -50,10 +50,6 @@ class TaskViewModel: ObservableObject {
         filteredTasks.filter { $0.completed }
     }
     
-    func keychainTesting() {
-        
-    }
-    
     func fetchTodos() async {
         state = .loading
         

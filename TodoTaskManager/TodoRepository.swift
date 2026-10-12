@@ -59,6 +59,7 @@ class TodoRepositoryImpl: TodoRepository {
             todos.forEach { context.insert(TodoModel(from: $0)) }
             try context.save()
         } catch {
+            context.rollback()
             print(TaskError.unknown(error).developerLog)
         }
     }
