@@ -70,9 +70,16 @@ final class TodoTaskManagerTests: XCTestCase {
     
     func testToggleTodo_failure() async {
         mock.mockTodos = [Todo(id: 1, userId: 1, title: "Test", completed: false)]
+        
         await vm.fetchTodos()
-        await vm.toggleTodo(id: 99)
+        mock.shouldFailToggle = true
+        await vm.toggleTodo(id: 1)
+        
         XCTAssertEqual(vm.filteredTasks.first?.completed, false)
+        XCTAssertEqual(
+            vm.snackbarMessage,
+            "Failed to mark task"
+        )
     }
     
     func testFilterActive_returnsActiveTasks() async {

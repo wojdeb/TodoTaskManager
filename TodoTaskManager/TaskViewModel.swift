@@ -15,19 +15,17 @@ class TaskViewModel: ObservableObject {
     @Published var searchQuery: String = ""
     @Published var snackbarMessage: String?
     
+    private var pendingIDs: Set<Todo.ID> = []
     private let todoRepository: TodoRepository
-        
+    
     init(repository: TodoRepository) {
         self.todoRepository = repository
-        Task {
-            await fetchTodos()
-        }
     }
     
     var filteredTasks: [Todo] {
         guard case .content(let tasks) = state else { return [] }
         let filtered: [Todo]
-
+        
         switch filter {
         case .all:
             filtered = tasks
@@ -51,47 +49,84 @@ class TaskViewModel: ObservableObject {
     var completedTasks: [Todo] {
         filteredTasks.filter { $0.completed }
     }
-
-    func fetchTodos() async {
-         state = .loading
-
-         do {
-             let tasks = try await todoRepository.fetchTodos()
-             if tasks.isEmpty {
-                 state = .empty
-             } else {
-                 state = .content(tasks: tasks)
-             }
-         } catch let error as TaskError {
-             print(error.developerLog)
-             state = .error(message: error.userMessage)
-         } catch {
-             let taskError = TaskError.unknown(error)
-             print(taskError.developerLog)
-             state = .error(message: taskError.userMessage)
-         }
-     }
     
-    func toggleTodo(id: Todo.ID) async {
-        guard case .content(var tasks) = state else { return }
+    func keychainTesting() {
         
-        guard let index = tasks.firstIndex(where: { $0.id == id }) else { return }
-        let originalTasks = tasks
-        let task = tasks[index]
-        tasks[index].completed.toggle()
-        state = .content(tasks: tasks)
-                
+    }
+    
+    func fetchTodos() async {
+        state = .loading
+        
         do {
-            try await todoRepository.toggleTodo(id: id, completed: !task.completed)
+            let tasks = try await todoRepository.fetchTodos()
+            if tasks.isEmpty {
+                state = .empty
+            } else {
+                state = .content(tasks: tasks)
+            }
         } catch let error as TaskError {
-            showSnackbar(task.completed ? "Failed to unmark task" : "Failed to mark task")
             print(error.developerLog)
-            state = .content(tasks: originalTasks)
+            state = .error(message: error.userMessage)
         } catch {
             let taskError = TaskError.unknown(error)
             print(taskError.developerLog)
-            state = .content(tasks: originalTasks)
+            state = .error(message: taskError.userMessage)
         }
+    }
+    
+    func toggleTodo(id: Todo.ID) async {
+        guard case .content(var tasks) = state,
+              let index = tasks.firstIndex(where: { $0.id == id })
+        else {
+            return
+        }
+
+        guard !pendingIDs.contains(id) else {
+            return
+        }
+
+        pendingIDs.insert(id)
+        defer {
+            pendingIDs.remove(id)
+        }
+
+        let previousValue = tasks[index].completed
+        let newValue = !previousValue
+
+        tasks[index].completed = newValue
+        state = .content(tasks: tasks)
+
+        do {
+            try await todoRepository.toggleTodo(
+                id: id,
+                completed: newValue
+            )
+        } catch {
+            rollbackTodo(id: id, completed: previousValue)
+
+            showSnackbar(
+                newValue
+                    ? "Failed to mark task"
+                    : "Failed to unmark task"
+            )
+
+            let taskError = error as? TaskError ?? TaskError.unknown(error)
+            print(taskError.developerLog)
+        }
+    }
+    
+    private func rollbackTodo(
+        id: Todo.ID,
+        completed previousValue: Bool
+    ) {
+        guard case .content(var tasks) = state,
+              let index = tasks.firstIndex(where: { $0.id == id })
+        else {
+            return
+        }
+
+        tasks[index].completed = previousValue
+        state = .content(tasks: tasks)
     }
     
     func showSnackbar(_ message: String) {
@@ -103,8 +138,8 @@ class TaskViewModel: ObservableObject {
     }
     
 #if DEBUG
-func setState(_ state: TasksViewState) {
-    self.state = state
-}
+    func setState(_ state: TasksViewState) {
+        self.state = state
+    }
 #endif
 }

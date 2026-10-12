@@ -30,6 +30,6 @@ struct TodoTaskManagerApp: App {
                 )
             )).preferredColorScheme(isDarkMode ? .dark : .light)
         }
-        .modelContainer(for: TodoModel.self)
+        .modelContainer(container)
     }
 }

@@ -30,8 +30,8 @@
             filePath = "TodoTaskManagerTests/TodoTaskManagerTests.swift"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "105"
-            endingLineNumber = "105"
+            startingLineNumber = "112"
+            endingLineNumber = "112"
             landmarkName = "testFilterAll_returnsAllTasks()"
             landmarkType = "7">
          </BreakpointContent>
@@ -46,8 +46,8 @@
             filePath = "TodoTaskManagerTests/TodoTaskManagerTests.swift"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "134"
-            endingLineNumber = "134"
+            startingLineNumber = "141"
+            endingLineNumber = "141"
             landmarkName = "testSearchQuery_empty_returnsAllFilteredTasks()"
             landmarkType = "7">
          </BreakpointContent>

@@ -10,13 +10,15 @@ import SwiftData
 import AlertToast
 
 struct TaskView: View {
-    @ObservedObject var vm: TaskViewModel
+    @StateObject var vm: TaskViewModel
     @AppStorage("isDarkMode") var isDarkMode: Bool = false
 
     
     var body: some View {
         NavigationStack {
             content
+        }.task {
+            await vm.fetchTodos()
         }
     }
     

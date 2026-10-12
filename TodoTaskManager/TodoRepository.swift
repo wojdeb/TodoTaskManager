@@ -17,7 +17,6 @@ class TodoRepositoryImpl: TodoRepository {
     private let provider: TaskProviding
     private let context: ModelContext
     private var cache: [Todo] = []
-    private var pendingToggles: Set<Int> = []
     
     init(provider: TaskProviding, context: ModelContext) {
         self.provider = provider
@@ -38,21 +37,18 @@ class TodoRepositoryImpl: TodoRepository {
     }
 
     func toggleTodo(id: Int, completed: Bool) async throws {
-        guard !pendingToggles.contains(id) else { return }
-        pendingToggles.insert(id)
-        defer { pendingToggles.remove(id) }
-        
-        
-        guard let index = cache.firstIndex(where: {task in task.id == id}) else { return }
-        cache[index].completed.toggle()
-        
-        do {
-            _ = try await provider.patchTodo(id: id, completed: cache[index].completed)
-            saveToSwiftData(cache)
-        } catch {
-            cache[index].completed.toggle()
-            throw error
+        let updatedTodo = try await provider.patchTodo(
+            id: id,
+            completed: completed
+        )
+
+        if let index = cache.firstIndex(where: { $0.id == id }) {
+            cache[index] = updatedTodo
+        } else {
+            cache.append(updatedTodo)
         }
+
+        saveToSwiftData(cache)
     }
     
     private func saveToSwiftData(_ todos: [Todo]) {
